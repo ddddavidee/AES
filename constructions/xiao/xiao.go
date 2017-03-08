@@ -1,8 +1,17 @@
+// Package xiao implements the Xiao-Lai white-box AES construction. There is an attack on this construction implemented
+// in the cryptanalysis/xiao package.
+//
+// The interface here is very similar to the one presented in the constructions/chow package. Chow's construction is
+// based exclusively on representing encryption with randomized lookup tables. Xiao-Lai's construction interleaves
+// randomized lookup tables and large linear transformations.
+//
+// "A Secure Implementation of White-Box AES" by Yaying Xiao and Xuejia Lai,
+// http://ieeexplore.ieee.org/xpl/login.jsp?arnumber=5404239
 package xiao
 
 import (
-	"github.com/OpenWhiteBox/AES/primitives/matrix"
-	"github.com/OpenWhiteBox/AES/primitives/table"
+	"github.com/OpenWhiteBox/primitives/matrix"
+	"github.com/OpenWhiteBox/primitives/table"
 )
 
 type Construction struct {
@@ -12,12 +21,15 @@ type Construction struct {
 	FinalMask matrix.Matrix
 }
 
+// BlockSize returns the block size of AES. (Necessary to implement cipher.Block.)
 func (constr Construction) BlockSize() int { return 16 }
 
+// Encrypt encrypts the first block in src into dst. Dst and src may point at the same memory.
 func (constr Construction) Encrypt(dst, src []byte) {
 	constr.crypt(dst, src)
 }
 
+// Decrypt decrypts the first block in src into dst. Dst and src may point at the same memory.
 func (constr Construction) Decrypt(dst, src []byte) {
 	constr.crypt(dst, src)
 }

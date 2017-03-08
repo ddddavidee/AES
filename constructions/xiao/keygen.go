@@ -1,9 +1,10 @@
 package xiao
 
 import (
-	"github.com/OpenWhiteBox/AES/primitives/encoding"
-	"github.com/OpenWhiteBox/AES/primitives/matrix"
-	"github.com/OpenWhiteBox/AES/primitives/table"
+	"github.com/OpenWhiteBox/primitives/encoding"
+	"github.com/OpenWhiteBox/primitives/matrix"
+	"github.com/OpenWhiteBox/primitives/random"
+	"github.com/OpenWhiteBox/primitives/table"
 
 	"github.com/OpenWhiteBox/AES/constructions/common"
 	"github.com/OpenWhiteBox/AES/constructions/saes"
@@ -43,8 +44,10 @@ func generateRoundMaterial(rs *common.RandomSource, out *Construction, hidden fu
 			outInv, _ := outEnc.Invert()
 
 			out.TBoxMixCol[round][pos/2] = encoding.DoubleToWordTable{
-				encoding.DoubleLinear{inEnc, inInv},
-				encoding.WordLinear{outInv, outEnc},
+				encoding.NewDoubleLinear(common.MixingBijection(rs, 16, round, pos/2)),
+				encoding.InverseWord{
+					encoding.NewWordLinear(common.MixingBijection(rs, 32, round, pos/4)),
+				},
 				hidden(round, pos),
 			}
 		}
@@ -79,21 +82,21 @@ func GenerateEncryptionKeys(key, seed []byte, opts common.KeyGenerationOpts) (ou
 
 	hidden := func(round, pos int) table.DoubleToWord {
 		if round == 9 {
-			return TBox{
+			return tBox{
 				[2]table.Byte{
 					common.TBox{constr, roundKeys[9][pos+0], roundKeys[10][pos+0]},
 					common.TBox{constr, roundKeys[9][pos+1], roundKeys[10][pos+1]},
 				},
-				SideFromPos(pos),
+				sideFromPos(pos),
 			}
 		} else {
-			return TBoxMixCol{
+			return tBoxMixCol{
 				[2]table.Byte{
 					common.TBox{constr, roundKeys[round][pos+0], 0x00},
 					common.TBox{constr, roundKeys[round][pos+1], 0x00},
 				},
-				MixColumns,
-				SideFromPos(pos),
+				mixColumns,
+				sideFromPos(pos),
 			}
 		}
 	}
@@ -118,30 +121,30 @@ func GenerateDecryptionKeys(key, seed []byte, opts common.KeyGenerationOpts) (ou
 
 	hidden := func(round, pos int) table.DoubleToWord {
 		if round == 0 {
-			return TBoxMixCol{
+			return tBoxMixCol{
 				[2]table.Byte{
 					common.InvTBox{constr, roundKeys[10][pos+0], roundKeys[9][pos+0]},
 					common.InvTBox{constr, roundKeys[10][pos+1], roundKeys[9][pos+1]},
 				},
-				UnMixColumns,
-				SideFromPos(pos),
+				unMixColumns,
+				sideFromPos(pos),
 			}
 		} else if 0 < round && round < 9 {
-			return TBoxMixCol{
+			return tBoxMixCol{
 				[2]table.Byte{
 					common.InvTBox{constr, 0x00, roundKeys[9-round][pos+0]},
 					common.InvTBox{constr, 0x00, roundKeys[9-round][pos+1]},
 				},
-				UnMixColumns,
-				SideFromPos(pos),
+				unMixColumns,
+				sideFromPos(pos),
 			}
 		} else {
-			return TBox{
+			return tBox{
 				[2]table.Byte{
 					common.InvTBox{constr, 0x00, roundKeys[0][pos+0]},
 					common.InvTBox{constr, 0x00, roundKeys[0][pos+1]},
 				},
-				SideFromPos(pos),
+				sideFromPos(pos),
 			}
 		}
 	}

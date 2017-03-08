@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/OpenWhiteBox/AES/primitives/matrix"
-	"github.com/OpenWhiteBox/AES/primitives/table"
+	"github.com/OpenWhiteBox/primitives/matrix"
+	"github.com/OpenWhiteBox/primitives/table"
 
 	"github.com/OpenWhiteBox/AES/constructions/common"
 	"github.com/OpenWhiteBox/AES/constructions/saes"
@@ -25,22 +25,22 @@ func TestTBoxMixCol(t *testing.T) {
 
 	baseConstr := saes.Construction{}
 
-	left := TBoxMixCol{
+	left := tBoxMixCol{
 		[2]table.Byte{
 			common.TBox{baseConstr, 0xea, 0x00},
 			common.TBox{baseConstr, 0x8d, 0x00},
 		},
-		MixColumns,
-		Left,
+		mixColumns,
+		left,
 	}
 
-	right := TBoxMixCol{
-		[2]table.Byte{
+	right := tBoxMixCol{
+		TBoxes: [2]table.Byte{
 			common.TBox{baseConstr, 0xf5, 0x00},
 			common.TBox{baseConstr, 0x2f, 0x00},
 		},
-		MixColumns,
-		Right,
+		MixCol: mixColumns,
+		Side:   right,
 	}
 
 	cand := left.Get([2]byte{in[0], in[1]})
@@ -54,7 +54,7 @@ func TestTBoxMixCol(t *testing.T) {
 }
 
 func TestEncrypt(t *testing.T) {
-	for n, vec := range test_vectors.AESVectors {
+	for n, vec := range test_vectors.GetAESVectors(testing.Short()) {
 		constr, inputMask, outputMask := GenerateEncryptionKeys(
 			vec.Key, vec.Key, common.IndependentMasks{common.RandomMask, common.RandomMask},
 		)
@@ -77,7 +77,7 @@ func TestEncrypt(t *testing.T) {
 }
 
 func TestDecrypt(t *testing.T) {
-	for n, vec := range test_vectors.AESVectors {
+	for n, vec := range test_vectors.GetAESVectors(testing.Short()) {
 		constr, inputMask, outputMask := GenerateDecryptionKeys(
 			vec.Key, vec.Key, common.IndependentMasks{common.RandomMask, common.RandomMask},
 		)
@@ -100,6 +100,10 @@ func TestDecrypt(t *testing.T) {
 }
 
 func TestPersistence(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping the persistence test in short mode!")
+	}
+
 	constr1, _, _ := GenerateEncryptionKeys(key, seed, common.IndependentMasks{common.RandomMask, common.RandomMask})
 
 	serialized := constr1.Serialize()
